@@ -110,7 +110,7 @@ const stats = [
   { number: '24/7', label: 'WhatsApp Support' },
 ];
 
-export default function PremiumTec() {
+export default function GameStop() {
   const [isLoading, setIsLoading] = useState(true);
   const [navScrolled, setNavScrolled] = useState(false);
   const [activeFilter, setActiveFilter] = useState('All');
@@ -163,8 +163,7 @@ export default function PremiumTec() {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.3, duration: 1, ease: [0.16, 1, 0.3, 1] }}
             >
-              <span className="cyan-gradient-text">PREMIUM</span>
-              <span className="text-white/90 ml-3">TEC</span>
+              GAMESTOP
             </motion.div>
             <motion.div
               className="absolute -bottom-2 left-0 right-0 h-[2px] shimmer-line"
@@ -201,7 +200,7 @@ export default function PremiumTec() {
             animate={{ opacity: 1 }}
             transition={{ delay: 1 }}
           >
-            Initializing experience
+            Initializing
           </motion.p>
         </div>
       </motion.div>
@@ -254,8 +253,7 @@ export default function PremiumTec() {
               <Zap className="w-4 h-4 text-black" />
             </div>
             <span className="text-lg font-black tracking-tighter uppercase">
-              <span className="cyan-gradient-text">PREMIUM</span>
-              <span className="text-white/80 ml-1.5">TEC</span>
+              <span className="cyan-gradient-text">GAME</span><span className="text-white/80 ml-1">STOP</span>
             </span>
           </motion.div>
 
@@ -339,7 +337,7 @@ export default function PremiumTec() {
             <div className="liquid-glass-pill px-4 py-2 flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-[10px] tracking-[0.25em] uppercase text-white/60 font-medium">
-                Curated in Harare, Zimbabwe
+                Curated in Harare
               </span>
               <MapPin className="w-3 h-3 text-white/40" />
             </div>
@@ -354,10 +352,10 @@ export default function PremiumTec() {
             style={{ letterSpacing: '-0.03em' }}
           >
             <span className="block text-white text-refraction">
-              Premium Hardware.
+              Experience
             </span>
             <span className="block cyan-gradient-text cyan-glow mt-2">
-              Zero Compromise.
+              The Next Era.
             </span>
           </motion.h1>
 
@@ -368,7 +366,7 @@ export default function PremiumTec() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.3, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           >
-            Gaming Consoles &bull; Phones &bull; Elite Tech
+            Gaming Consoles &bull; Phones &bull; Zero Compromise
           </motion.p>
 
           {/* CTA Buttons */}
@@ -729,12 +727,11 @@ export default function PremiumTec() {
                   <Zap className="w-4 h-4 text-black" />
                 </div>
                 <span className="text-xl font-black tracking-tighter uppercase">
-                  <span className="cyan-gradient-text">PREMIUM</span>
-                  <span className="text-white/80 ml-1">TEC</span>
+                  <span className="cyan-gradient-text">GAME</span><span className="text-white/80 ml-1">STOP</span>
                 </span>
               </div>
               <p className="text-sm text-white/40 font-light leading-relaxed">
-                Premium gaming hardware and elite tech. Curated selection. Exceptional service.
+                Premium gaming hardware. Curated selection. Exceptional service.
               </p>
             </motion.div>
 
@@ -790,11 +787,11 @@ export default function PremiumTec() {
             viewport={{ once: true }}
           >
             <p className="text-[10px] text-white/30 uppercase tracking-[0.25em] font-light">
-              &copy; 2024 Premium Tec. All rights reserved.
+              &copy; 2024 GameStop. All rights reserved.
             </p>
             <div className="flex items-center gap-1 shimmer-line" style={{ background: 'transparent' }}>
               <div className="h-[1px] w-8" style={{ background: `linear-gradient(90deg, transparent, ${CYAN}, transparent)` }} />
-              <span className="text-[9px] text-white/20 uppercase tracking-[0.3em]">Designed for excellence</span>
+              <span className="text-[9px] text-white/20 uppercase tracking-[0.3em]">              Designed for gaming enthusiasts</span>
               <div className="h-[1px] w-8" style={{ background: `linear-gradient(90deg, transparent, ${CYAN}, transparent)` }} />
             </div>
           </motion.div>

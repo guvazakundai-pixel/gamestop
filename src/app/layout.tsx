@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PREMIUM TEC — Elite Gaming Hardware & Tech",
-  description: "Premium gaming hardware. Curated collection. Zero compromise. Gaming consoles, phones, and elite tech.",
+  title: "GameStop — Premium Gaming Hardware",
+  description: "Premium gaming hardware. Curated collection. Zero compromise.",
 };
 
 export default function RootLayout({
