@@ -1,636 +1,769 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
-import { MessageCircle, MapPin, Clock, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MessageCircle, MapPin, Clock, ChevronDown, ChevronRight, Phone, Shield, Zap, Star, X, Menu, Search } from 'lucide-react';
+import { products, categories, notifications, type Product } from '../data/products';
+
+function useInView(threshold = 0.1) {
+  const [ref, setRef] = useState<HTMLElement | null>(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    if (!ref) return;
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setInView(true); }, { threshold });
+    obs.observe(ref);
+    return () => obs.disconnect();
+  }, [ref, threshold]);
+  return { ref: setRef, inView };
+}
+
+function NotificationPopup() {
+  const [visible, setVisible] = useState(false);
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    const show = setTimeout(() => setVisible(true), 4000);
+    return () => clearTimeout(show);
+  }, []);
+
+  useEffect(() => {
+    if (!visible) return;
+    const hide = setTimeout(() => setVisible(false), 4000);
+    return () => clearTimeout(hide);
+  }, [visible]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrent((prev) => (prev + 1) % notifications.length);
+      setVisible(true);
+    }, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <motion.div
+      initial={{ x: 300, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      exit={{ x: 300, opacity: 0 }}
+      className="fixed bottom-24 right-4 z-40 bg-[#141414] border border-[#2a2a2a] p-4 max-w-xs shadow-2xl"
+    >
+      <button onClick={() => setVisible(false)} className="absolute top-2 right-2 text-white/40 hover:text-white">
+        <X className="w-3 h-3" />
+      </button>
+      <div className="flex items-start gap-3">
+        <div className="w-2 h-2 mt-1.5 bg-[#ff1a1a] rounded-full flex-shrink-0 pulse-glow" />
+        <div>
+          <p className="text-xs font-bold text-white">{notifications[current].text}</p>
+          <p className="text-[10px] text-white/40 mt-1">{notifications[current].time}</p>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function TickerBar() {
+  const items = [
+    'PS5 SLIM — $650 NEW', 'XBOX SERIES X IN STOCK', 'SELL YOUR CONSOLE — CASH ON THE SPOT',
+    'IPHONE 15 PRO MAX — $880', 'REPAIR LAB OPEN', 'FREE DELIVERY HARARE',
+    'NINTENDO SWITCH OLED — $420', 'TRADE-INS WELCOME',
+  ];
+  return (
+    <div className="bg-[#ff1a1a] text-white overflow-hidden py-2 relative z-50">
+      <div className="ticker-track flex whitespace-nowrap">
+        {[...items, ...items].map((item, i) => (
+          <span key={i} className="mx-8 text-[10px] font-black tracking-[0.2em] uppercase flex-shrink-0">
+            {item}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ProductCard({ product, index, onClick }: { product: Product; index: number; onClick: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: index * 0.04 }}
+      viewport={{ once: true, margin: '-50px' }}
+      whileHover={{ y: -6 }}
+      onClick={onClick}
+      className="group cursor-pointer product-card-glow border border-[#1e1e1e] bg-[#0a0a0a] transition-all duration-300 overflow-hidden"
+    >
+      <div className="relative aspect-square overflow-hidden bg-[#111]">
+        <img
+          src={product.image}
+          alt={product.name}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+          loading="lazy"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        {product.badge && (
+          <div className="absolute top-3 left-3 px-2 py-1 bg-[#ff1a1a] text-white text-[9px] font-black tracking-wider uppercase pulse-glow">
+            {product.badge}
+          </div>
+        )}
+        {product.inStock && (
+          <div className="absolute top-3 right-3 flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+            <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">In Stock</span>
+          </div>
+        )}
+        <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+          <div className="w-full py-2.5 bg-[#ff1a1a] text-white text-[10px] font-black tracking-[0.2em] uppercase text-center">
+            Quick View
+          </div>
+        </div>
+      </div>
+      <div className="p-4">
+        <p className="text-[9px] font-bold text-[#ff1a1a] tracking-[0.2em] uppercase mb-1.5">
+          {product.category}
+        </p>
+        <h3 className="text-sm font-black uppercase tracking-tight mb-1 group-hover:text-[#ff1a1a] transition-colors">
+          {product.name}
+        </h3>
+        <p className="text-[10px] text-white/40 mb-3">{product.condition}</p>
+        {product.specs && (
+          <div className="flex flex-wrap gap-1 mb-3">
+            {product.specs.slice(0, 2).map((spec) => (
+              <span key={spec} className="px-1.5 py-0.5 bg-[#1e1e1e] text-[8px] text-white/50 font-medium tracking-wider">
+                {spec}
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center justify-between pt-3 border-t border-[#1e1e1e]">
+          <span className="text-lg font-black">${product.price}</span>
+          <span className="text-[9px] text-white/30 uppercase tracking-wider">USD</span>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function ProductModal({ product, onClose }: { product: Product; onClose: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ duration: 0.3 }}
+        className="relative bg-[#0a0a0a] border border-[#2a2a2a] max-w-2xl w-full max-h-[85vh] overflow-y-auto z-10"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button onClick={onClose} className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 transition-colors">
+          <X className="w-4 h-4" />
+        </button>
+        <div className="aspect-[4/3] bg-[#111] overflow-hidden">
+          <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+        </div>
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[9px] font-bold text-[#ff1a1a] tracking-[0.2em] uppercase">{product.category}</p>
+            {product.inStock && (
+              <span className="flex items-center gap-1.5 text-emerald-400 text-[10px] font-bold">
+                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" /> In Stock
+              </span>
+            )}
+          </div>
+          <h2 className="text-2xl font-black uppercase tracking-tight mb-1">{product.name}</h2>
+          <p className="text-sm text-white/50 mb-4">{product.condition}</p>
+          <p className="text-3xl font-black text-[#ff1a1a] mb-6">${product.price} <span className="text-sm font-normal text-white/30">USD</span></p>
+          {product.specs && (
+            <div className="mb-6">
+              <p className="text-[9px] font-bold tracking-[0.2em] text-white/40 uppercase mb-3">Specifications</p>
+              <div className="grid grid-cols-2 gap-2">
+                {product.specs.map((spec) => (
+                  <div key={spec} className="px-3 py-2 bg-[#141414] border border-[#1e1e1e] text-xs text-white/70">{spec}</div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="flex gap-3">
+            <a
+              href={`https://wa.me/263XXXXXXXXX?text=Hi, I'm interested in the ${product.name} ($${product.price})`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 py-3 bg-[#ff1a1a] text-white text-[10px] font-black tracking-[0.2em] uppercase text-center hover:bg-[#cc0000] transition-colors flex items-center justify-center gap-2"
+            >
+              <MessageCircle className="w-3.5 h-3.5" /> BUY NOW
+            </a>
+            <a
+              href={`https://wa.me/263XXXXXXXXX?text=Hi, I'd like to trade in my ${product.category} for a ${product.name}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 py-3 border border-white/20 text-white text-[10px] font-black tracking-[0.2em] uppercase text-center hover:border-[#ff1a1a] hover:text-[#ff1a1a] transition-colors"
+            >
+              TRADE IN
+            </a>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
 
 export default function GameStop() {
   const [isLoading, setIsLoading] = useState(true);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const containerRef = useRef(null);
-  const { scrollY } = useScroll();
-
-  // Parallax transforms
-  const y1 = useTransform(scrollY, [0, 500], [0, 150]);
-  const y2 = useTransform(scrollY, [500, 1500], [0, 200]);
-  const opacity1 = useTransform(scrollY, [0, 300], [1, 0.3]);
-  const opacity2 = useTransform(scrollY, [800, 1200], [0, 1]);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [mobileMenu, setMobileMenu] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 2500);
+    const timer = setTimeout(() => setIsLoading(false), 2000);
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+  const filteredProducts = activeCategory
+    ? products.filter((p) => p.categorySlug === activeCategory)
+    : products;
 
-  const products = [
-    { id: 1, name: 'PlayStation 3', category: 'Gaming Consoles', price: 100.00, condition: 'Pre-owned', color: '#1a1a2e' },
-    { id: 2, name: 'Nintendo switch oled', category: 'Gaming Consoles', price: 420.00, condition: 'Boxed New/Mint', color: '#2e1a3f' },
-    { id: 3, name: 'Xbox series s', category: 'Gaming Consoles', price: 300.00, condition: 'Clean Pre-owned', color: '#1a2e3f' },
-    { id: 4, name: 'Pre owned ps5 slim', category: 'Gaming Consoles', price: 550.00, condition: 'Second Hand', color: '#2e1a1a' },
-    { id: 5, name: 'Series x', category: 'Gaming Consoles', price: 500.00, condition: 'Clean Pre-owned', color: '#1a2e1a' },
-    { id: 6, name: 'Boxed ps5 slim', category: 'Gaming Consoles', price: 650.00, condition: 'Brand New Boxed', color: '#3f1a1a' },
-    { id: 7, name: 'Iphone 14 pro max', category: 'Phones', price: 700.00, condition: 'Pristine', color: '#1a3f2e' },
-    { id: 8, name: '15 pro max', category: 'Phones', price: 880.00, condition: 'Pristine', color: '#3f2e1a' },
-    { id: 9, name: '15 pro max', category: 'Phones', price: 880.00, condition: 'Excellent Health', color: '#2e3f1a' },
-  ];
-
-  // PRELOADER
   if (isLoading) {
     return (
       <motion.div
         className="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center overflow-hidden"
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.8 }}
+        transition={{ duration: 0.6 }}
       >
-        <div className="relative flex flex-col items-center gap-12">
-          {/* Animated Rockstar-style logo reveal */}
+        <motion.div
+          initial={{ scale: 2, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.6 }}
+          className="relative"
+        >
+          <div className="text-5xl md:text-7xl font-black tracking-tighter text-white" style={{ letterSpacing: '-0.03em' }}>
+            GAMESTOP<span className="text-[#ff1a1a]">263</span>
+          </div>
           <motion.div
-            initial={{ scale: 2, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.8, ease: 'easeOut' }}
-            className="relative"
-          >
-            <motion.div
-              className="text-6xl font-black tracking-tighter text-white"
-              style={{ letterSpacing: '-0.02em' }}
-              initial={{ y: 40, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2, duration: 0.8 }}
-            >
-              GAMESTOP
-            </motion.div>
-            <motion.div
-              className="absolute -bottom-3 left-0 h-0.5 bg-red-600"
-              initial={{ width: 0 }}
-              animate={{ width: '100%' }}
-              transition={{ delay: 0.4, duration: 0.6 }}
-            />
-          </motion.div>
-
-          {/* Loading bar */}
+            className="absolute -bottom-2 left-0 h-0.5 bg-[#ff1a1a]"
+            initial={{ width: 0 }}
+            animate={{ width: '100%' }}
+            transition={{ delay: 0.3, duration: 0.8 }}
+          />
+        </motion.div>
+        <motion.div
+          className="w-48 h-0.5 bg-[#1e1e1e] mt-8 overflow-hidden"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+        >
           <motion.div
-            className="w-64 h-1 bg-zinc-900 overflow-hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-          >
-            <motion.div
-              className="h-full bg-gradient-to-r from-red-600 to-white"
-              initial={{ x: '-100%' }}
-              animate={{ x: '100%' }}
-              transition={{ delay: 0.7, duration: 1.8, ease: 'easeInOut' }}
-            />
-          </motion.div>
-        </div>
+            className="h-full bg-[#ff1a1a]"
+            initial={{ x: '-100%' }}
+            animate={{ x: '100%' }}
+            transition={{ delay: 0.5, duration: 1.4, ease: 'easeInOut' }}
+          />
+        </motion.div>
       </motion.div>
     );
   }
 
   return (
-    <motion.div
-      ref={containerRef}
-      className="min-h-screen bg-black text-white overflow-x-hidden"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-    >
-      {/* STICKY NAVIGATION */}
-      <motion.nav
-        className="fixed top-0 z-40 w-full backdrop-blur-md bg-black/50 border-b border-zinc-900/50"
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ delay: 0.3, duration: 0.6 }}
-      >
-        <div className="max-w-7xl mx-auto px-6 md:px-12 py-4 flex items-center justify-between">
-          <motion.h1
-            className="text-xl font-black tracking-tighter uppercase"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-          >
-            GAMESTOP
-          </motion.h1>
+    <div className="min-h-screen bg-black text-white overflow-x-hidden">
+      <TickerBar />
 
-          <div className="hidden md:flex items-center gap-12">
-            {['CATALOG', 'ABOUT', 'CONTACT'].map((item, idx) => (
-              <motion.button
-                key={item}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 + idx * 0.1 }}
-                className="text-xs font-light tracking-widest uppercase text-white/70 hover:text-white transition-colors group relative"
-              >
+      <nav className="fixed top-8 left-0 right-0 z-40 backdrop-blur-xl bg-black/70 border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 flex items-center justify-between">
+          <a href="#" className="text-lg font-black tracking-tighter uppercase" style={{ letterSpacing: '-0.03em' }}>
+            GAMESTOP<span className="text-[#ff1a1a]">263</span>
+          </a>
+
+          <div className="hidden md:flex items-center gap-8">
+            {['Consoles', 'Phones', 'Accessories', 'Trade In', 'Contact'].map((item) => (
+              <a key={item} href={`#${item.toLowerCase().replace(' ', '-')}`} className="text-[10px] font-bold tracking-[0.2em] uppercase text-white/60 hover:text-[#ff1a1a] transition-colors">
                 {item}
-                <motion.span
-                  className="absolute bottom-0 left-0 h-px bg-red-600"
-                  initial={{ width: 0 }}
-                  whileHover={{ width: '100%' }}
-                  transition={{ duration: 0.3 }}
-                />
-              </motion.button>
+              </a>
             ))}
           </div>
-        </div>
-      </motion.nav>
 
-      {/* CINEMATIC HERO SECTION */}
-      <motion.section
-        className="relative h-screen w-full flex items-center justify-center overflow-hidden mt-16"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-      >
-        {/* Parallax background */}
-        <motion.div
-          className="absolute inset-0 z-0"
-          style={{ y: y1 }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-black to-black" />
-          <motion.div
-            className="absolute inset-0 opacity-30"
-            animate={{
-              backgroundPosition: ['0% 0%', '100% 100%'],
-            }}
-            transition={{ duration: 8, repeat: Infinity, repeatType: 'reverse' }}
-            style={{
-              backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(220, 38, 38, 0.1) 0%, transparent 50%)',
-              backgroundSize: '200% 200%',
-            }}
-          />
-        </motion.div>
-
-        {/* Centered hero content */}
-        <div className="relative z-10 text-center px-6 md:px-12 max-w-4xl">
-          <motion.h1
-            className="text-5xl md:text-7xl lg:text-8xl font-black uppercase tracking-tighter leading-[1.0] mb-6"
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7, duration: 0.8 }}
-            style={{ letterSpacing: '-0.02em' }}
-          >
-            EXPERIENCE<br />
-            <span className="text-red-600">THE NEXT ERA</span>
-          </motion.h1>
-
-          <motion.p
-            className="text-lg md:text-xl font-light tracking-widest uppercase text-white/60 mb-12 max-w-2xl mx-auto"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.9, duration: 0.8 }}
-          >
-            Premium gaming hardware. Curated collection. Zero compromise.
-          </motion.p>
-
-          <motion.div
-            className="flex flex-col md:flex-row items-center justify-center gap-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.1, duration: 0.8 }}
-          >
-            <motion.button
-              whileHover={{ 
-                backgroundColor: '#dc2626',
-                x: 8
-              }}
-              whileTap={{ scale: 0.98 }}
-              className="px-8 py-4 border-2 border-white text-white font-bold tracking-widest uppercase text-sm transition-all"
+          <div className="flex items-center gap-4">
+            <a
+              href="https://wa.me/263XXXXXXXXX"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden md:flex items-center gap-2 px-4 py-2 bg-[#ff1a1a] text-white text-[9px] font-black tracking-[0.2em] uppercase hover:bg-[#cc0000] transition-colors"
             >
-              BROWSE COLLECTION
-            </motion.button>
-
-            <motion.button
-              whileHover={{ x: 8 }}
-              className="px-8 py-4 text-white font-bold tracking-widest uppercase text-sm flex items-center gap-3 group"
-            >
-              SCROLL TO EXPLORE
-              <motion.span
-                animate={{ y: [0, 8, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-              >
-                <ChevronDown className="w-5 h-5" />
-              </motion.span>
-            </motion.button>
-          </motion.div>
-        </div>
-
-        {/* Scroll indicator */}
-        <motion.div
-          className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20"
-          animate={{ y: [0, 12, 0] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          <div className="w-1 h-8 border border-white/30 rounded-full flex items-center justify-center">
-            <motion.div
-              className="w-0.5 h-2 bg-red-600"
-              animate={{ opacity: [1, 0] }}
-              transition={{ duration: 1, repeat: Infinity }}
-            />
+              <MessageCircle className="w-3 h-3" /> WhatsApp
+            </a>
+            <button onClick={() => setMobileMenu(!mobileMenu)} className="md:hidden text-white">
+              <Menu className="w-5 h-5" />
+            </button>
           </div>
-        </motion.div>
-      </motion.section>
+        </div>
 
-      {/* FEATURED SHOWCASE SECTION */}
-      <motion.section
-        className="relative py-24 md:py-40 px-6 md:px-12 overflow-hidden"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        transition={{ duration: 0.8 }}
-        viewport={{ once: true, margin: '-100px' }}
-      >
-        <div className="max-w-7xl mx-auto">
-          {/* Section header */}
-          <motion.div
-            className="mb-20"
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-          >
-            <p className="text-xs font-bold tracking-[0.2em] text-red-600 uppercase mb-4">
-              PREMIUM COLLECTION
-            </p>
-            <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter mb-6">
-              Handpicked<br />Gaming Hardware
-            </h2>
-            <div className="w-12 h-1 bg-red-600" />
-          </motion.div>
-
-          {/* Featured products grid - Magazine style */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
-            {/* Large featured product */}
+        <AnimatePresence>
+          {mobileMenu && (
             <motion.div
-              className="md:col-span-2 md:row-span-2 group"
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true }}
-              whileHover={{ y: -12 }}
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="md:hidden bg-black/95 border-t border-white/5 overflow-hidden"
             >
-              <div className="relative aspect-[4/3] bg-gradient-to-br from-slate-900 to-black overflow-hidden border border-zinc-900">
-                <motion.div
-                  className="absolute inset-0 flex items-center justify-center text-8xl"
-                  whileHover={{ scale: 1.1 }}
-                  transition={{ duration: 0.6 }}
-                >
-                  🎮
-                </motion.div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-              </div>
-              <div className="mt-6">
-                <p className="text-xs font-bold text-red-600 tracking-widest uppercase mb-3">
-                  PlayStation 5 Slim
-                </p>
-                <h3 className="text-2xl font-black uppercase tracking-tight mb-2">
-                  Next Generation Gaming
-                </h3>
-                <p className="text-sm text-white/60 font-light leading-relaxed mb-4">
-                  Experience unprecedented performance with the PS5 Slim. Premium hardware, pristine condition.
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl font-bold text-red-600">$550.00</span>
-                  <motion.button
-                    whileHover={{ backgroundColor: '#dc2626' }}
-                    className="px-6 py-2 border border-white text-white text-xs font-bold uppercase tracking-wider hover:border-red-600 transition-colors"
-                  >
-                    Add to cart
-                  </motion.button>
-                </div>
+              <div className="px-4 py-4 space-y-3">
+                {['Consoles', 'Phones', 'Accessories', 'Trade In', 'Contact'].map((item) => (
+                  <a key={item} href={`#${item.toLowerCase().replace(' ', '-')}`} onClick={() => setMobileMenu(false)} className="block text-xs font-bold tracking-[0.2em] uppercase text-white/70 hover:text-[#ff1a1a] py-2">
+                    {item}
+                  </a>
+                ))}
+                <a href="https://wa.me/263XXXXXXXXX" className="block w-full py-3 bg-[#ff1a1a] text-white text-[10px] font-bold tracking-[0.2em] uppercase text-center">
+                  <MessageCircle className="w-3 h-3 inline mr-2" /> WhatsApp Us
+                </a>
               </div>
             </motion.div>
+          )}
+        </AnimatePresence>
+      </nav>
 
-            {/* Vertical featured product */}
-            <motion.div
-              className="group"
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.1 }}
-              viewport={{ once: true }}
-              whileHover={{ y: -12 }}
-            >
-              <div className="relative aspect-[3/4] bg-gradient-to-br from-blue-950 to-black overflow-hidden border border-zinc-900">
-                <motion.div
-                  className="absolute inset-0 flex items-center justify-center text-6xl"
-                  whileHover={{ scale: 1.1 }}
-                  transition={{ duration: 0.6 }}
-                >
-                  🎮
-                </motion.div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-              </div>
-              <div className="mt-4">
-                <p className="text-xs font-bold text-red-600 tracking-widest uppercase mb-2">
-                  Nintendo Switch
-                </p>
-                <h3 className="text-lg font-black uppercase tracking-tight mb-2">
-                  OLED Edition
-                </h3>
-                <p className="text-xs text-white/60 mb-3">Boxed, pristine condition</p>
-                <span className="text-xl font-bold text-red-600">$420.00</span>
-              </div>
-            </motion.div>
-
-            {/* Smaller featured product */}
-            <motion.div
-              className="group"
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              viewport={{ once: true }}
-              whileHover={{ y: -12 }}
-            >
-              <div className="relative aspect-[3/4] bg-gradient-to-br from-green-950 to-black overflow-hidden border border-zinc-900">
-                <motion.div
-                  className="absolute inset-0 flex items-center justify-center text-6xl"
-                  whileHover={{ scale: 1.1 }}
-                  transition={{ duration: 0.6 }}
-                >
-                  🎮
-                </motion.div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-              </div>
-              <div className="mt-4">
-                <p className="text-xs font-bold text-red-600 tracking-widest uppercase mb-2">
-                  Xbox Series X
-                </p>
-                <h3 className="text-lg font-black uppercase tracking-tight mb-2">
-                  Pure Power
-                </h3>
-                <p className="text-xs text-white/60 mb-3">Clean, pre-owned</p>
-                <span className="text-xl font-bold text-red-600">$500.00</span>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </motion.section>
-
-      {/* FULL-WIDTH COLLECTION GRID */}
-      <motion.section
-        className="relative py-24 md:py-40 bg-[#0a0a0a] border-y border-zinc-900"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        transition={{ duration: 0.8 }}
-        viewport={{ once: true }}
-      >
-        <div className="max-w-7xl mx-auto px-6 md:px-12">
-          {/* Section header */}
-          <motion.div
-            className="mb-16"
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-          >
-            <p className="text-xs font-bold tracking-[0.2em] text-red-600 uppercase mb-4">
-              COMPLETE INVENTORY
-            </p>
-            <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter">
-              All Available Products
-            </h2>
-          </motion.div>
-
-          {/* Product grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {products.map((product, idx) => (
-              <motion.div
-                key={product.id}
-                className="group cursor-pointer"
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: idx * 0.05 }}
-                viewport={{ once: true }}
-                whileHover={{ y: -8 }}
-              >
-                {/* Product card */}
-                <div className="border border-zinc-900 overflow-hidden bg-gradient-to-br from-zinc-900/50 to-black group-hover:border-white transition-colors duration-300">
-                  {/* Image container */}
-                  <div className="relative aspect-square overflow-hidden bg-black flex items-center justify-center">
-                    <motion.div
-                      className="text-6xl"
-                      whileHover={{ scale: 1.15, rotate: 5 }}
-                      transition={{ duration: 0.5 }}
-                    >
-                      🎮
-                    </motion.div>
-
-                    {/* Hover overlay */}
-                    <motion.div
-                      className="absolute inset-0 bg-red-600/0 group-hover:bg-red-600/10 transition-colors duration-300 flex items-center justify-center"
-                      initial={{ opacity: 0 }}
-                      whileHover={{ opacity: 1 }}
-                    >
-                      <motion.button
-                        initial={{ scale: 0 }}
-                        whileHover={{ scale: 1 }}
-                        className="px-6 py-2 bg-red-600 text-white text-xs font-bold uppercase tracking-wider"
-                      >
-                        Quick View
-                      </motion.button>
-                    </motion.div>
-                  </div>
-
-                  {/* Product info */}
-                  <div className="p-6">
-                    <p className="text-xs font-bold text-red-600 tracking-widest uppercase mb-2">
-                      {product.category}
-                    </p>
-                    <h3 className="text-sm font-black uppercase tracking-tight leading-tight mb-2 group-hover:text-red-600 transition-colors">
-                      {product.name}
-                    </h3>
-                    <div className="flex items-center justify-between pt-4 border-t border-zinc-900">
-                      <span className="text-lg font-bold">${product.price.toFixed(2)}</span>
-                      <span className="text-xs text-white/50 uppercase">{product.condition}</span>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </motion.section>
-
-      {/* TESTIMONIALS / STATS SECTION */}
-      <motion.section
-        className="relative py-24 md:py-40 px-6 md:px-12"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        transition={{ duration: 0.8 }}
-        viewport={{ once: true }}
-      >
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            {[
-              { number: '500+', label: 'Products in Stock' },
-              { number: '10K+', label: 'Satisfied Customers' },
-              { number: '24/7', label: 'WhatsApp Support' }
-            ].map((stat, idx) => (
-              <motion.div
-                key={idx}
-                className="text-center"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: idx * 0.1 }}
-                viewport={{ once: true }}
-              >
-                <p className="text-5xl md:text-6xl font-black text-red-600 mb-2">
-                  {stat.number}
-                </p>
-                <p className="text-sm font-light tracking-widest uppercase text-white/60">
-                  {stat.label}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </motion.section>
-
-      {/* CTA SECTION */}
-      <motion.section
-        className="relative py-24 md:py-40 px-6 md:px-12 bg-black border-y border-zinc-900 overflow-hidden"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        transition={{ duration: 0.8 }}
-        viewport={{ once: true }}
-      >
-        {/* Background effect */}
+      {/* HERO SECTION */}
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-28 pb-16" id="hero">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-black to-[#0a0a0a]" />
+        <div className="absolute inset-0 hero-grid-overlay" />
         <motion.div
-          className="absolute -top-40 -right-40 w-80 h-80 bg-red-600/10 rounded-full blur-3xl"
+          className="absolute inset-0"
           animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.5, 0.3],
+            background: [
+              'radial-gradient(circle at 20% 30%, rgba(255,26,26,0.08) 0%, transparent 50%)',
+              'radial-gradient(circle at 80% 70%, rgba(255,26,26,0.06) 0%, transparent 50%)',
+              'radial-gradient(circle at 50% 50%, rgba(255,26,26,0.08) 0%, transparent 50%)',
+            ],
           }}
-          transition={{ duration: 8, repeat: Infinity }}
+          transition={{ duration: 8, repeat: Infinity, repeatType: 'reverse' }}
         />
 
-        <div className="max-w-4xl mx-auto relative z-10 text-center">
-          <motion.h2
-            className="text-4xl md:text-6xl font-black uppercase tracking-tighter mb-8"
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-          >
-            Ready to Level Up?
-          </motion.h2>
-
-          <motion.p
-            className="text-lg font-light text-white/70 mb-12 max-w-2xl mx-auto"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.1 }}
-            viewport={{ once: true }}
-          >
-            Connect with our showroom via WhatsApp for product inquiries, custom orders, and exclusive deals.
-          </motion.p>
-
-          <motion.button
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            viewport={{ once: true }}
-            whileHover={{ 
-              scale: 1.05,
-              boxShadow: '0 0 30px rgba(220, 38, 38, 0.5)'
-            }}
-            whileTap={{ scale: 0.95 }}
-            className="px-12 py-4 bg-red-600 text-white font-bold tracking-widest uppercase text-sm flex items-center gap-3 mx-auto border border-red-600 hover:border-red-500 transition-colors"
-          >
-            <MessageCircle className="w-5 h-5" />
-            MESSAGE SHOWROOM
-          </motion.button>
-        </div>
-      </motion.section>
-
-      {/* FOOTER */}
-      <motion.footer
-        className="relative bg-black border-t border-zinc-900"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        transition={{ duration: 0.8 }}
-        viewport={{ once: true }}
-      >
-        <div className="max-w-7xl mx-auto px-6 md:px-12 py-20">
-          {/* Footer grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-16 mb-16">
-            {/* Brand */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-            >
-              <h3 className="text-2xl font-black uppercase tracking-tight mb-4">
-                GameStop
-              </h3>
-              <p className="text-sm text-white/60 font-light">
-                Premium gaming hardware. Curated selection. Exceptional service.
-              </p>
-            </motion.div>
-
-            {/* Hours */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              viewport={{ once: true }}
-            >
-              <p className="text-xs font-bold uppercase tracking-widest text-red-600 mb-4">
-                Hours
-              </p>
-              <div className="space-y-2 text-sm text-white/60">
-                <p className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  Tuesday: 9:00 AM – 6:00 PM
-                </p>
-                <p className="text-xs text-white/40">Shopping & Retail</p>
-              </div>
-            </motion.div>
-
-            {/* Location */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              viewport={{ once: true }}
-            >
-              <p className="text-xs font-bold uppercase tracking-widest text-red-600 mb-4">
-                Location
-              </p>
-              <div className="space-y-2 text-sm text-white/60">
-                <p className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4" />
-                  Mbuya Nehanda Street, Harare
-                </p>
-                <p className="text-xs text-white/40">Zimbabwe</p>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Divider */}
-          <div className="border-t border-zinc-900 my-12" />
-
-          {/* Bottom footer */}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-8 text-center">
           <motion.div
-            className="text-center space-y-4"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            viewport={{ once: true }}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.8 }}
           >
-            <p className="text-xs text-white/50 uppercase tracking-widest font-light">
-              © 2024 GameStop. All rights reserved.
+            <p className="text-[10px] font-black tracking-[0.3em] text-[#ff1a1a] uppercase mb-6">
+              Harare&apos;s #1 Gaming Store
             </p>
-            <p className="text-xs text-white/40">
-              Designed for premium gaming enthusiasts.
+            <h1 className="text-5xl md:text-7xl lg:text-[6rem] font-black uppercase leading-[0.9] mb-6" style={{ letterSpacing: '-0.03em' }}>
+              CASH ON<br />
+              <span className="red-gradient-text">THE SPOT</span>
+            </h1>
+            <p className="text-base md:text-lg text-white/50 font-light max-w-xl mx-auto mb-4">
+              Buy &bull; Sell &bull; Repair Consoles & iPhones in Harare
+            </p>
+            <p className="text-sm text-white/30 max-w-md mx-auto mb-10">
+              Instant payouts. Best prices. Trusted gaming experts since 2019.
             </p>
           </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.8 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+          >
+            <a href="#consoles" className="px-8 py-4 bg-[#ff1a1a] text-white font-black tracking-[0.2em] uppercase text-xs hover:bg-[#cc0000] transition-colors pulse-glow">
+              SHOP GAMING
+            </a>
+            <a href="#trade-in" className="px-8 py-4 border-2 border-white/20 text-white font-black tracking-[0.2em] uppercase text-xs hover:border-[#ff1a1a] hover:text-[#ff1a1a] transition-colors">
+              SELL YOUR CONSOLE
+            </a>
+          </motion.div>
+
+          {/* Trust badges */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1, duration: 0.8 }}
+            className="mt-16 flex flex-wrap items-center justify-center gap-6 md:gap-10"
+          >
+            {[
+              { label: '500+', sub: 'Products' },
+              { label: '10K+', sub: 'Customers' },
+              { label: '5+', sub: 'Years' },
+              { label: '24/7', sub: 'WhatsApp' },
+            ].map((stat) => (
+              <div key={stat.label} className="text-center">
+                <p className="text-2xl md:text-3xl font-black text-[#ff1a1a]">{stat.label}</p>
+                <p className="text-[9px] tracking-[0.2em] uppercase text-white/40 font-bold">{stat.sub}</p>
+              </div>
+            ))}
+          </motion.div>
         </div>
-      </motion.footer>
-    </motion.div>
+
+        <motion.div
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10"
+          animate={{ y: [0, 8, 0] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        >
+          <ChevronDown className="w-5 h-5 text-white/30" />
+        </motion.div>
+      </section>
+
+      {/* GAMING ARSENAL - PRODUCTS */}
+      <section className="relative py-16 md:py-24" id="consoles">
+        <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className="mb-12"
+          >
+            <p className="text-[10px] font-black tracking-[0.3em] text-[#ff1a1a] uppercase mb-3">
+              Gaming Arsenal
+            </p>
+            <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter mb-4" style={{ letterSpacing: '-0.02em' }}>
+              Browse by Category
+            </h2>
+            <div className="w-16 h-0.5 bg-[#ff1a1a]" />
+          </motion.div>
+
+          {/* Category filter */}
+          <div className="flex flex-wrap gap-2 mb-10">
+            <button
+              onClick={() => setActiveCategory(null)}
+              className={`px-4 py-2 text-[9px] font-black tracking-[0.2em] uppercase transition-all duration-300 border ${
+                activeCategory === null
+                  ? 'bg-[#ff1a1a] text-white border-[#ff1a1a]'
+                  : 'bg-transparent text-white/50 border-[#1e1e1e] hover:border-white/30 hover:text-white'
+              }`}
+            >
+              All
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat.slug}
+                onClick={() => setActiveCategory(cat.slug)}
+                className={`px-4 py-2 text-[9px] font-black tracking-[0.2em] uppercase transition-all duration-300 border ${
+                  activeCategory === cat.slug
+                    ? 'bg-[#ff1a1a] text-white border-[#ff1a1a]'
+                    : 'bg-transparent text-white/50 border-[#1e1e1e] hover:border-white/30 hover:text-white'
+                }`}
+              >
+                {cat.icon} {cat.name}
+              </button>
+            ))}
+          </div>
+
+          {/* Category sections when showing all */}
+          {!activeCategory && categories.map((cat) => {
+            const catProducts = products.filter((p) => p.categorySlug === cat.slug);
+            if (catProducts.length === 0) return null;
+            return (
+              <div key={cat.slug} className="mb-16">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">{cat.icon}</span>
+                    <h3 className="text-xl md:text-2xl font-black uppercase tracking-tight">{cat.name}</h3>
+                  </div>
+                  <button
+                    onClick={() => setActiveCategory(cat.slug)}
+                    className="flex items-center gap-1 text-[10px] font-bold tracking-[0.2em] uppercase text-[#ff1a1a] hover:text-[#ff6666] transition-colors"
+                  >
+                    View All <ChevronRight className="w-3 h-3" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+                  {catProducts.slice(0, 4).map((product, idx) => (
+                    <ProductCard key={product.id} product={product} index={idx} onClick={() => setSelectedProduct(product)} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Full grid when filtering */}
+          {activeCategory && (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+              {filteredProducts.map((product, idx) => (
+                <ProductCard key={product.id} product={product} index={idx} onClick={() => setSelectedProduct(product)} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* CASH ON THE SPOT */}
+      <section className="relative py-16 md:py-24 bg-[#0a0a0a] border-y border-[#1e1e1e]" id="trade-in">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-[#ff1a1a] rounded-full blur-[150px]" />
+        </div>
+        <div className="max-w-7xl mx-auto px-4 md:px-8 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <p className="text-[10px] font-black tracking-[0.3em] text-[#ff1a1a] uppercase mb-3">
+              Instant Cash
+            </p>
+            <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter mb-6" style={{ letterSpacing: '-0.02em' }}>
+              CASH ON<br />
+              <span className="red-gradient-text">THE SPOT</span>
+            </h2>
+            <p className="text-sm text-white/50 max-w-lg mx-auto">
+              Walk in with your old console or phone. Walk out with cash. No hassle, no waiting — instant payouts guaranteed.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 max-w-3xl mx-auto">
+            {[
+              { step: '01', icon: <Phone className="w-6 h-6" />, title: 'Bring Your Device', desc: 'Walk into our Mbuya Nehanda St store with any console, iPhone, or gaming gear.' },
+              { step: '02', icon: <Search className="w-6 h-6" />, title: 'Get Valuation', desc: 'Our experts assess your device on the spot. Fair prices, transparent process.' },
+              { step: '03', icon: <Zap className="w-6 h-6" />, title: 'Get Paid Instant', desc: 'Cash in hand immediately. USD or EcoCash — your choice.' },
+            ].map((item, idx) => (
+              <motion.div
+                key={item.step}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: idx * 0.15 }}
+                viewport={{ once: true }}
+                className="relative text-center p-8 border border-[#1e1e1e] bg-[#0a0a0a]"
+              >
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#ff1a1a] text-white text-[9px] font-black tracking-[0.2em] uppercase">
+                  Step {item.step}
+                </div>
+                <div className="w-12 h-12 mx-auto mb-4 flex items-center justify-center border border-[#2a2a2a] text-[#ff1a1a]">
+                  {item.icon}
+                </div>
+                <h3 className="text-sm font-black uppercase tracking-tight mb-2">{item.title}</h3>
+                <p className="text-xs text-white/40 leading-relaxed">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            viewport={{ once: true }}
+            className="text-center mt-12"
+          >
+            <a
+              href="https://wa.me/263XXXXXXXXX?text=Hi, I want to sell my device"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-[#ff1a1a] text-white font-black tracking-[0.2em] uppercase text-xs hover:bg-[#cc0000] transition-colors pulse-glow"
+            >
+              <MessageCircle className="w-4 h-4" /> GET YOUR QUOTE NOW
+            </a>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* REPAIR LAB */}
+      <section className="relative py-16 md:py-24" id="repair">
+        <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className="mb-12"
+          >
+            <p className="text-[10px] font-black tracking-[0.3em] text-[#ff1a1a] uppercase mb-3">
+              Repair Lab
+            </p>
+            <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter mb-4" style={{ letterSpacing: '-0.02em' }}>
+              We Fix It All
+            </h2>
+            <div className="w-16 h-0.5 bg-[#ff1a1a]" />
+          </motion.div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+            {[
+              { icon: '🔧', title: 'HDMI Repair', price: 'From $30' },
+              { icon: '🎮', title: 'Controller Fix', price: 'From $25' },
+              { icon: '🌡️', title: 'Overheating', price: 'From $35' },
+              { icon: '💾', title: 'Software Fix', price: 'From $20' },
+              { icon: '📱', title: 'iPhone Repair', price: 'From $40' },
+              { icon: '🔌', title: 'Port Replace', price: 'From $25' },
+              { icon: '💿', title: 'Disc Drive Fix', price: 'From $30' },
+              { icon: '🔊', title: 'Audio Repair', price: 'From $20' },
+              { icon: '⚡', title: 'Power Supply', price: 'From $35' },
+              { icon: '🖥️', title: 'Screen Replace', price: 'From $50' },
+            ].map((service, idx) => (
+              <motion.div
+                key={service.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: idx * 0.05 }}
+                viewport={{ once: true }}
+                className="p-4 md:p-6 border border-[#1e1e1e] bg-[#0a0a0a] hover:border-[#ff1a1a]/40 transition-all duration-300 group cursor-pointer text-center"
+              >
+                <div className="text-2xl md:text-3xl mb-3">{service.icon}</div>
+                <h4 className="text-xs md:text-sm font-black uppercase tracking-tight mb-1 group-hover:text-[#ff1a1a] transition-colors">{service.title}</h4>
+                <p className="text-[10px] text-[#ff1a1a] font-bold">{service.price}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* TRUST SECTION */}
+      <section className="relative py-16 md:py-24 bg-[#0a0a0a] border-y border-[#1e1e1e]" id="trust">
+        <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <p className="text-[10px] font-black tracking-[0.3em] text-[#ff1a1a] uppercase mb-3">
+              Trusted by Harare
+            </p>
+            <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter" style={{ letterSpacing: '-0.02em' }}>
+              Why Gamers Trust Us
+            </h2>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+            {[
+              { icon: <Shield className="w-6 h-6" />, title: '6-Month Warranty', desc: 'Every console and device sold comes with our 6-month warranty. We stand behind our products.' },
+              { icon: <Zap className="w-6 h-6" />, title: 'Instant Cash Payouts', desc: 'No bank transfers, no waiting. Walk in, get valued, walk out with USD cash. Simple.' },
+              { icon: <Star className="w-6 h-6" />, title: 'Real Store, Real People', desc: 'Visit us on Mbuya Nehanda Street. Talk to real gaming experts who know their stuff.' },
+            ].map((item, idx) => (
+              <motion.div
+                key={item.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: idx * 0.1 }}
+                viewport={{ once: true }}
+                className="p-8 border border-[#1e1e1e] text-center"
+              >
+                <div className="w-12 h-12 mx-auto mb-4 flex items-center justify-center border border-[#ff1a1a]/30 text-[#ff1a1a]">
+                  {item.icon}
+                </div>
+                <h3 className="text-sm font-black uppercase tracking-tight mb-2">{item.title}</h3>
+                <p className="text-xs text-white/40 leading-relaxed">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Reviews */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[
+              { name: 'Tendai M.', text: 'Bought my PS5 Slim here — brand new, best price in Harare. These guys are legit!', rating: 5 },
+              { name: 'Rufaro K.', text: 'Traded in my old Xbox and got cash on the spot. No drama, no nonsense. Highly recommend.', rating: 5 },
+              { name: 'Nyasha D.', text: 'Fixed my HDMI port in under an hour. Professional and affordable. GameStop263 is the real deal.', rating: 5 },
+              { name: 'Kudzai S.', text: 'Got my iPhone 15 Pro Max here, pristine condition. Great service and fair pricing!', rating: 5 },
+            ].map((review, idx) => (
+              <motion.div
+                key={review.name}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: idx * 0.1 }}
+                viewport={{ once: true }}
+                className="p-6 border border-[#1e1e1e] bg-[#0a0a0a]"
+              >
+                <div className="flex gap-1 mb-3">
+                  {Array.from({ length: review.rating }).map((_, i) => (
+                    <Star key={i} className="w-3 h-3 fill-[#ff1a1a] text-[#ff1a1a]" />
+                  ))}
+                </div>
+                <p className="text-sm text-white/70 leading-relaxed mb-4 italic">&ldquo;{review.text}&rdquo;</p>
+                <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#ff1a1a]">{review.name}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CONTACT / FOOTER */}
+      <footer className="relative py-16 md:py-24 border-t border-[#1e1e1e]" id="contact">
+        <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-16">
+            <div className="md:col-span-2">
+              <h3 className="text-3xl font-black uppercase tracking-tighter mb-2" style={{ letterSpacing: '-0.03em' }}>
+                GAMESTOP<span className="text-[#ff1a1a]">263</span>
+              </h3>
+              <p className="text-sm text-white/40 leading-relaxed mb-6 max-w-sm">
+                Harare&apos;s premier gaming store. Buy, sell, and repair consoles, iPhones, and gaming accessories. Cash on the spot.
+              </p>
+              <a
+                href="https://wa.me/263XXXXXXXXX"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#25D366] text-white font-bold tracking-[0.15em] uppercase text-xs hover:bg-[#1da851] transition-colors"
+              >
+                <MessageCircle className="w-4 h-4" /> Chat on WhatsApp
+              </a>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-black tracking-[0.2em] text-[#ff1a1a] uppercase mb-4">Location</p>
+              <div className="space-y-2 text-sm text-white/50">
+                <p className="flex items-center gap-2"><MapPin className="w-4 h-4 text-[#ff1a1a]" /> Mbuya Nehanda Street</p>
+                <p>Harare, Zimbabwe</p>
+              </div>
+              <p className="text-[10px] font-black tracking-[0.2em] text-[#ff1a1a] uppercase mt-6 mb-4">Hours</p>
+              <div className="space-y-1 text-sm text-white/50">
+                <p className="flex items-center gap-2"><Clock className="w-4 h-4 text-[#ff1a1a]" /> Mon – Sat: 8AM – 6PM</p>
+                <p>Sun: 9AM – 4PM</p>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-black tracking-[0.2em] text-[#ff1a1a] uppercase mb-4">Quick Links</p>
+              <div className="space-y-2">
+                {[
+                  { label: 'PlayStation', href: '#consoles' },
+                  { label: 'Xbox', href: '#consoles' },
+                  { label: 'Nintendo', href: '#consoles' },
+                  { label: 'iPhones', href: '#consoles' },
+                  { label: 'Trade In', href: '#trade-in' },
+                  { label: 'Repair Lab', href: '#repair' },
+                ].map((link) => (
+                  <a key={link.label} href={link.href} className="block text-sm text-white/50 hover:text-[#ff1a1a] transition-colors">
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-[#1e1e1e] pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-[10px] text-white/30 tracking-[0.15em] uppercase">
+              &copy; 2025 GameStop263. All rights reserved.
+            </p>
+            <p className="text-[10px] text-white/20">
+              Harare&apos;s #1 Gaming Store
+            </p>
+          </div>
+        </div>
+      </footer>
+
+      {/* Floating WhatsApp Button */}
+      <a
+        href="https://wa.me/263XXXXXXXXX"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-4 md:right-6 z-50 w-14 h-14 bg-[#25D366] rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform pulse-glow"
+        style={{ boxShadow: '0 0 20px rgba(37, 211, 102, 0.4)' }}
+      >
+        <MessageCircle className="w-6 h-6 text-white" />
+      </a>
+
+      {/* Notification Popups */}
+      <NotificationPopup />
+
+      {/* Product Modal */}
+      <AnimatePresence>
+        {selectedProduct && (
+          <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
+        )}
+      </AnimatePresence>
+
+    </div>
   );
 }
