@@ -2,20 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, MapPin, Clock, ChevronDown, ChevronRight, Phone, Shield, Zap, Star, X, Menu, Search } from 'lucide-react';
+import { MessageCircle, MapPin, Clock, ChevronDown, ChevronRight, Phone, Shield, Zap, Star, X, Menu, Search, ChevronLeft } from 'lucide-react';
 import { products, categories, notifications, type Product } from '../data/products';
-
-function useInView(threshold = 0.1) {
-  const [ref, setRef] = useState<HTMLElement | null>(null);
-  const [inView, setInView] = useState(false);
-  useEffect(() => {
-    if (!ref) return;
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setInView(true); }, { threshold });
-    obs.observe(ref);
-    return () => obs.disconnect();
-  }, [ref, threshold]);
-  return { ref: setRef, inView };
-}
 
 function NotificationPopup() {
   const [visible, setVisible] = useState(false);
@@ -65,9 +53,9 @@ function NotificationPopup() {
 
 function TickerBar() {
   const items = [
-    'PS5 SLIM — $650 NEW', 'XBOX SERIES X IN STOCK', 'SELL YOUR CONSOLE — CASH ON THE SPOT',
-    'IPHONE 15 PRO MAX — $880', 'REPAIR LAB OPEN', 'FREE DELIVERY HARARE',
-    'NINTENDO SWITCH OLED — $420', 'TRADE-INS WELCOME',
+    'LOGITECH STEERING + SHIFTER — $450', 'PS5 CONSOLES IN STOCK', 'SELL YOUR CONSOLE — CASH ON THE SPOT',
+    'XBOX SERIES S — $300', 'REPAIR LAB OPEN', 'FREE DELIVERY HARARE',
+    'NINTENDO SWITCH — $340', 'TRADE-INS WELCOME',
   ];
   return (
     <div className="bg-[#ff1a1a] text-white overflow-hidden py-2 relative z-50">
@@ -95,7 +83,7 @@ function ProductCard({ product, index, onClick }: { product: Product; index: num
     >
       <div className="relative aspect-square overflow-hidden bg-[#111]">
         <img
-          src={product.image}
+          src={product.images[0]}
           alt={product.name}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
           loading="lazy"
@@ -104,6 +92,13 @@ function ProductCard({ product, index, onClick }: { product: Product; index: num
         {product.badge && (
           <div className="absolute top-3 left-3 px-2 py-1 bg-[#ff1a1a] text-white text-[9px] font-black tracking-wider uppercase pulse-glow">
             {product.badge}
+          </div>
+        )}
+        {product.images.length > 1 && (
+          <div className="absolute bottom-3 left-3 flex gap-1">
+            {product.images.slice(0, 4).map((_, i) => (
+              <div key={i} className="w-1.5 h-1.5 rounded-full bg-white/60" />
+            ))}
           </div>
         )}
         {product.inStock && (
@@ -145,6 +140,8 @@ function ProductCard({ product, index, onClick }: { product: Product; index: num
 }
 
 function ProductModal({ product, onClose }: { product: Product; onClose: () => void }) {
+  const [activeImg, setActiveImg] = useState(0);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -159,54 +156,106 @@ function ProductModal({ product, onClose }: { product: Product; onClose: () => v
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={{ duration: 0.3 }}
-        className="relative bg-[#0a0a0a] border border-[#2a2a2a] max-w-2xl w-full max-h-[85vh] overflow-y-auto z-10"
+        className="relative bg-[#0a0a0a] border border-[#2a2a2a] max-w-4xl w-full max-h-[90vh] overflow-y-auto z-10"
         onClick={(e) => e.stopPropagation()}
       >
         <button onClick={onClose} className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 transition-colors">
           <X className="w-4 h-4" />
         </button>
-        <div className="aspect-[4/3] bg-[#111] overflow-hidden">
-          <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-        </div>
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[9px] font-bold text-[#ff1a1a] tracking-[0.2em] uppercase">{product.category}</p>
-            {product.inStock && (
-              <span className="flex items-center gap-1.5 text-emerald-400 text-[10px] font-bold">
-                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" /> In Stock
-              </span>
-            )}
-          </div>
-          <h2 className="text-2xl font-black uppercase tracking-tight mb-1">{product.name}</h2>
-          <p className="text-sm text-white/50 mb-4">{product.condition}</p>
-          <p className="text-3xl font-black text-[#ff1a1a] mb-6">${product.price} <span className="text-sm font-normal text-white/30">USD</span></p>
-          {product.specs && (
-            <div className="mb-6">
-              <p className="text-[9px] font-bold tracking-[0.2em] text-white/40 uppercase mb-3">Specifications</p>
-              <div className="grid grid-cols-2 gap-2">
-                {product.specs.map((spec) => (
-                  <div key={spec} className="px-3 py-2 bg-[#141414] border border-[#1e1e1e] text-xs text-white/70">{spec}</div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2">
+          <div className="bg-[#111]">
+            <div className="relative aspect-square overflow-hidden">
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={activeImg}
+                  src={product.images[activeImg]}
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                />
+              </AnimatePresence>
+              {product.images.length > 1 && (
+                <>
+                  {activeImg > 0 && (
+                    <button
+                      onClick={() => setActiveImg((prev) => prev - 1)}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-black/60 hover:bg-black/80 transition-colors"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                  )}
+                  {activeImg < product.images.length - 1 && (
+                    <button
+                      onClick={() => setActiveImg((prev) => prev + 1)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-black/60 hover:bg-black/80 transition-colors"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+            {product.images.length > 1 && (
+              <div className="flex gap-2 p-3 overflow-x-auto">
+                {product.images.map((img, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveImg(i)}
+                    className={`flex-shrink-0 w-14 h-14 overflow-hidden border-2 transition-all duration-300 ${
+                      i === activeImg ? 'border-[#ff1a1a]' : 'border-transparent opacity-50 hover:opacity-100'
+                    }`}
+                  >
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </button>
                 ))}
               </div>
+            )}
+          </div>
+
+          <div className="p-6 md:p-8 flex flex-col">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[9px] font-bold text-[#ff1a1a] tracking-[0.2em] uppercase">{product.category}</p>
+              {product.inStock && (
+                <span className="flex items-center gap-1.5 text-emerald-400 text-[10px] font-bold">
+                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" /> In Stock
+                </span>
+              )}
             </div>
-          )}
-          <div className="flex gap-3">
-            <a
-              href={`https://wa.me/263XXXXXXXXX?text=Hi, I'm interested in the ${product.name} ($${product.price})`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 py-3 bg-[#ff1a1a] text-white text-[10px] font-black tracking-[0.2em] uppercase text-center hover:bg-[#cc0000] transition-colors flex items-center justify-center gap-2"
-            >
-              <MessageCircle className="w-3.5 h-3.5" /> BUY NOW
-            </a>
-            <a
-              href={`https://wa.me/263XXXXXXXXX?text=Hi, I'd like to trade in my ${product.category} for a ${product.name}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 py-3 border border-white/20 text-white text-[10px] font-black tracking-[0.2em] uppercase text-center hover:border-[#ff1a1a] hover:text-[#ff1a1a] transition-colors"
-            >
-              TRADE IN
-            </a>
+            <h2 className="text-2xl font-black uppercase tracking-tight mb-1">{product.name}</h2>
+            <p className="text-sm text-white/50 mb-4">{product.condition}</p>
+            <p className="text-3xl font-black text-[#ff1a1a] mb-6">${product.price} <span className="text-sm font-normal text-white/30">USD</span></p>
+            {product.specs && (
+              <div className="mb-6">
+                <p className="text-[9px] font-bold tracking-[0.2em] text-white/40 uppercase mb-3">Specifications</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {product.specs.map((spec) => (
+                    <div key={spec} className="px-3 py-2 bg-[#141414] border border-[#1e1e1e] text-xs text-white/70">{spec}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="flex gap-3 mt-auto">
+              <a
+                href={`https://wa.me/263XXXXXXXXX?text=Hi, I'm interested in the ${product.name} ($${product.price})`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 py-3 bg-[#ff1a1a] text-white text-[10px] font-black tracking-[0.2em] uppercase text-center hover:bg-[#cc0000] transition-colors flex items-center justify-center gap-2"
+              >
+                <MessageCircle className="w-3.5 h-3.5" /> BUY NOW
+              </a>
+              <a
+                href={`https://wa.me/263XXXXXXXXX?text=Hi, I'd like to trade in my ${product.category} for a ${product.name}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 py-3 border border-white/20 text-white text-[10px] font-black tracking-[0.2em] uppercase text-center hover:border-[#ff1a1a] hover:text-[#ff1a1a] transition-colors"
+              >
+                TRADE IN
+              </a>
+            </div>
           </div>
         </div>
       </motion.div>
@@ -280,7 +329,7 @@ export default function GameStop() {
           </a>
 
           <div className="hidden md:flex items-center gap-8">
-            {['Consoles', 'Phones', 'Accessories', 'Trade In', 'Contact'].map((item) => (
+            {['Consoles', 'Accessories', 'Trade In', 'Contact'].map((item) => (
               <a key={item} href={`#${item.toLowerCase().replace(' ', '-')}`} className="text-[10px] font-bold tracking-[0.2em] uppercase text-white/60 hover:text-[#ff1a1a] transition-colors">
                 {item}
               </a>
@@ -311,7 +360,7 @@ export default function GameStop() {
               className="md:hidden bg-black/95 border-t border-white/5 overflow-hidden"
             >
               <div className="px-4 py-4 space-y-3">
-                {['Consoles', 'Phones', 'Accessories', 'Trade In', 'Contact'].map((item) => (
+                {['Consoles', 'Accessories', 'Trade In', 'Contact'].map((item) => (
                   <a key={item} href={`#${item.toLowerCase().replace(' ', '-')}`} onClick={() => setMobileMenu(false)} className="block text-xs font-bold tracking-[0.2em] uppercase text-white/70 hover:text-[#ff1a1a] py-2">
                     {item}
                   </a>
@@ -325,7 +374,6 @@ export default function GameStop() {
         </AnimatePresence>
       </nav>
 
-      {/* HERO SECTION */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-28 pb-16" id="hero">
         <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-black to-[#0a0a0a]" />
         <div className="absolute inset-0 hero-grid-overlay" />
@@ -376,7 +424,6 @@ export default function GameStop() {
             </a>
           </motion.div>
 
-          {/* Trust badges */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -406,7 +453,6 @@ export default function GameStop() {
         </motion.div>
       </section>
 
-      {/* GAMING ARSENAL - PRODUCTS */}
       <section className="relative py-16 md:py-24" id="consoles">
         <div className="max-w-7xl mx-auto px-4 md:px-8">
           <motion.div
@@ -416,16 +462,11 @@ export default function GameStop() {
             viewport={{ once: true }}
             className="mb-12"
           >
-            <p className="text-[10px] font-black tracking-[0.3em] text-[#ff1a1a] uppercase mb-3">
-              Gaming Arsenal
-            </p>
-            <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter mb-4" style={{ letterSpacing: '-0.02em' }}>
-              Browse by Category
-            </h2>
+            <p className="text-[10px] font-black tracking-[0.3em] text-[#ff1a1a] uppercase mb-3">Gaming Arsenal</p>
+            <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter mb-4" style={{ letterSpacing: '-0.02em' }}>Browse by Category</h2>
             <div className="w-16 h-0.5 bg-[#ff1a1a]" />
           </motion.div>
 
-          {/* Category filter */}
           <div className="flex flex-wrap gap-2 mb-10">
             <button
               onClick={() => setActiveCategory(null)}
@@ -452,7 +493,6 @@ export default function GameStop() {
             ))}
           </div>
 
-          {/* Category sections when showing all */}
           {!activeCategory && categories.map((cat) => {
             const catProducts = products.filter((p) => p.categorySlug === cat.slug);
             if (catProducts.length === 0) return null;
@@ -479,7 +519,6 @@ export default function GameStop() {
             );
           })}
 
-          {/* Full grid when filtering */}
           {activeCategory && (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
               {filteredProducts.map((product, idx) => (
@@ -490,7 +529,6 @@ export default function GameStop() {
         </div>
       </section>
 
-      {/* CASH ON THE SPOT */}
       <section className="relative py-16 md:py-24 bg-[#0a0a0a] border-y border-[#1e1e1e]" id="trade-in">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-96 h-96 bg-[#ff1a1a] rounded-full blur-[150px]" />
@@ -503,12 +541,9 @@ export default function GameStop() {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <p className="text-[10px] font-black tracking-[0.3em] text-[#ff1a1a] uppercase mb-3">
-              Instant Cash
-            </p>
+            <p className="text-[10px] font-black tracking-[0.3em] text-[#ff1a1a] uppercase mb-3">Instant Cash</p>
             <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter mb-6" style={{ letterSpacing: '-0.02em' }}>
-              CASH ON<br />
-              <span className="red-gradient-text">THE SPOT</span>
+              CASH ON<br /><span className="red-gradient-text">THE SPOT</span>
             </h2>
             <p className="text-sm text-white/50 max-w-lg mx-auto">
               Walk in with your old console or phone. Walk out with cash. No hassle, no waiting — instant payouts guaranteed.
@@ -529,12 +564,8 @@ export default function GameStop() {
                 viewport={{ once: true }}
                 className="relative text-center p-8 border border-[#1e1e1e] bg-[#0a0a0a]"
               >
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#ff1a1a] text-white text-[9px] font-black tracking-[0.2em] uppercase">
-                  Step {item.step}
-                </div>
-                <div className="w-12 h-12 mx-auto mb-4 flex items-center justify-center border border-[#2a2a2a] text-[#ff1a1a]">
-                  {item.icon}
-                </div>
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#ff1a1a] text-white text-[9px] font-black tracking-[0.2em] uppercase">Step {item.step}</div>
+                <div className="w-12 h-12 mx-auto mb-4 flex items-center justify-center border border-[#2a2a2a] text-[#ff1a1a]">{item.icon}</div>
                 <h3 className="text-sm font-black uppercase tracking-tight mb-2">{item.title}</h3>
                 <p className="text-xs text-white/40 leading-relaxed">{item.desc}</p>
               </motion.div>
@@ -560,7 +591,6 @@ export default function GameStop() {
         </div>
       </section>
 
-      {/* REPAIR LAB */}
       <section className="relative py-16 md:py-24" id="repair">
         <div className="max-w-7xl mx-auto px-4 md:px-8">
           <motion.div
@@ -570,12 +600,8 @@ export default function GameStop() {
             viewport={{ once: true }}
             className="mb-12"
           >
-            <p className="text-[10px] font-black tracking-[0.3em] text-[#ff1a1a] uppercase mb-3">
-              Repair Lab
-            </p>
-            <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter mb-4" style={{ letterSpacing: '-0.02em' }}>
-              We Fix It All
-            </h2>
+            <p className="text-[10px] font-black tracking-[0.3em] text-[#ff1a1a] uppercase mb-3">Repair Lab</p>
+            <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter mb-4" style={{ letterSpacing: '-0.02em' }}>We Fix It All</h2>
             <div className="w-16 h-0.5 bg-[#ff1a1a]" />
           </motion.div>
 
@@ -609,7 +635,6 @@ export default function GameStop() {
         </div>
       </section>
 
-      {/* TRUST SECTION */}
       <section className="relative py-16 md:py-24 bg-[#0a0a0a] border-y border-[#1e1e1e]" id="trust">
         <div className="max-w-7xl mx-auto px-4 md:px-8">
           <motion.div
@@ -619,12 +644,8 @@ export default function GameStop() {
             viewport={{ once: true }}
             className="text-center mb-12"
           >
-            <p className="text-[10px] font-black tracking-[0.3em] text-[#ff1a1a] uppercase mb-3">
-              Trusted by Harare
-            </p>
-            <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter" style={{ letterSpacing: '-0.02em' }}>
-              Why Gamers Trust Us
-            </h2>
+            <p className="text-[10px] font-black tracking-[0.3em] text-[#ff1a1a] uppercase mb-3">Trusted by Harare</p>
+            <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter" style={{ letterSpacing: '-0.02em' }}>Why Gamers Trust Us</h2>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
@@ -641,22 +662,19 @@ export default function GameStop() {
                 viewport={{ once: true }}
                 className="p-8 border border-[#1e1e1e] text-center"
               >
-                <div className="w-12 h-12 mx-auto mb-4 flex items-center justify-center border border-[#ff1a1a]/30 text-[#ff1a1a]">
-                  {item.icon}
-                </div>
+                <div className="w-12 h-12 mx-auto mb-4 flex items-center justify-center border border-[#ff1a1a]/30 text-[#ff1a1a]">{item.icon}</div>
                 <h3 className="text-sm font-black uppercase tracking-tight mb-2">{item.title}</h3>
                 <p className="text-xs text-white/40 leading-relaxed">{item.desc}</p>
               </motion.div>
             ))}
           </div>
 
-          {/* Reviews */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
-              { name: 'Tendai M.', text: 'Bought my PS5 Slim here — brand new, best price in Harare. These guys are legit!', rating: 5 },
+              { name: 'Tendai M.', text: 'Bought my PS5 here — best price in Harare. These guys are legit!', rating: 5 },
               { name: 'Rufaro K.', text: 'Traded in my old Xbox and got cash on the spot. No drama, no nonsense. Highly recommend.', rating: 5 },
               { name: 'Nyasha D.', text: 'Fixed my HDMI port in under an hour. Professional and affordable. GameStop263 is the real deal.', rating: 5 },
-              { name: 'Kudzai S.', text: 'Got my iPhone 15 Pro Max here, pristine condition. Great service and fair pricing!', rating: 5 },
+              { name: 'Kudzai S.', text: 'Got my steering wheel setup here, brand new condition. Great service and fair pricing!', rating: 5 },
             ].map((review, idx) => (
               <motion.div
                 key={review.name}
@@ -679,7 +697,6 @@ export default function GameStop() {
         </div>
       </section>
 
-      {/* CONTACT / FOOTER */}
       <footer className="relative py-16 md:py-24 border-t border-[#1e1e1e]" id="contact">
         <div className="max-w-7xl mx-auto px-4 md:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-16">
@@ -699,7 +716,6 @@ export default function GameStop() {
                 <MessageCircle className="w-4 h-4" /> Chat on WhatsApp
               </a>
             </div>
-
             <div>
               <p className="text-[10px] font-black tracking-[0.2em] text-[#ff1a1a] uppercase mb-4">Location</p>
               <div className="space-y-2 text-sm text-white/50">
@@ -712,38 +728,29 @@ export default function GameStop() {
                 <p>Sun: 9AM – 4PM</p>
               </div>
             </div>
-
             <div>
               <p className="text-[10px] font-black tracking-[0.2em] text-[#ff1a1a] uppercase mb-4">Quick Links</p>
               <div className="space-y-2">
                 {[
                   { label: 'PlayStation', href: '#consoles' },
                   { label: 'Xbox', href: '#consoles' },
-                  { label: 'Nintendo', href: '#consoles' },
-                  { label: 'iPhones', href: '#consoles' },
+                  { label: 'Nintendo Switch', href: '#consoles' },
+                  { label: 'Steering & Accessories', href: '#consoles' },
                   { label: 'Trade In', href: '#trade-in' },
                   { label: 'Repair Lab', href: '#repair' },
                 ].map((link) => (
-                  <a key={link.label} href={link.href} className="block text-sm text-white/50 hover:text-[#ff1a1a] transition-colors">
-                    {link.label}
-                  </a>
+                  <a key={link.label} href={link.href} className="block text-sm text-white/50 hover:text-[#ff1a1a] transition-colors">{link.label}</a>
                 ))}
               </div>
             </div>
           </div>
-
           <div className="border-t border-[#1e1e1e] pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-[10px] text-white/30 tracking-[0.15em] uppercase">
-              &copy; 2025 GameStop263. All rights reserved.
-            </p>
-            <p className="text-[10px] text-white/20">
-              Harare&apos;s #1 Gaming Store
-            </p>
+            <p className="text-[10px] text-white/30 tracking-[0.15em] uppercase">&copy; 2025 GameStop263. All rights reserved.</p>
+            <p className="text-[10px] text-white/20">Harare&apos;s #1 Gaming Store</p>
           </div>
         </div>
       </footer>
 
-      {/* Floating WhatsApp Button */}
       <a
         href="https://wa.me/263XXXXXXXXX"
         target="_blank"
@@ -754,16 +761,13 @@ export default function GameStop() {
         <MessageCircle className="w-6 h-6 text-white" />
       </a>
 
-      {/* Notification Popups */}
       <NotificationPopup />
 
-      {/* Product Modal */}
       <AnimatePresence>
         {selectedProduct && (
           <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
         )}
       </AnimatePresence>
-
     </div>
   );
 }
