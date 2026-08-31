@@ -11,6 +11,27 @@ export interface Product {
   inStock: boolean;
 }
 
+/* Centralized CIRCUITLOBBY site config — edit everything here. */
+export const site = {
+  brand: "CIRCUITLOBBY",
+  tagline: "Your Gaming World. Your Gear. Your Lobby.",
+  // WhatsApp number — international format, no + or spaces. Edit once here.
+  whatsapp: "263XXXXXXXXX",
+};
+
+export const slugify = (s: string) =>
+  s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
+export const productBySlug = (slug: string) => products.find((p) => p.id === slug);
+
+/* WhatsApp links — single source of truth for the purchase flow. */
+export const waBase = () => `https://wa.me/${site.whatsapp}`;
+export const waProduct = (p: Product) =>
+  `${waBase()}?text=${encodeURIComponent(`Hi, I'm interested in the ${p.name} ($${p.price})`)}`;
+export const waTrade = (p: Product) =>
+  `${waBase()}?text=${encodeURIComponent(`Hi, I'd like to trade in my ${p.category} for a ${p.name}`)}`;
+export const waGeneral = (msg: string) => `${waBase()}?text=${encodeURIComponent(msg)}`;
+
 export const products: Product[] = [
   {
     id: 'logitech-steering',
